@@ -11,6 +11,16 @@ CISCO_REASON Duplicate TCP SYN|Failed to locate egress interface|Invalid transpo
 CISCO_DIRECTION Inbound|inbound|Outbound|outbound
 CISCO_INTERVAL first hit|%{INT}-second interval
 CISCO_XLATE_TYPE static|dynamic
+CISCO_GROUP_IP (?:Group = %{DATA:group_ip}, )?IP = %{IP:src_ip}
+CISCO_SSL_CLIENT client %{SRC_INTERFACE_IP_PORT} to %{DST_IP_PORT}
+CISCO_SSL_HANDSHAKE SSL handshake with %{CISCO_SSL_CLIENT} for %{DATA:protocol} session
+CISCO_MAPPING Map Tag ?= %{DATA:map_tag}.  Map Sequence Number = %{INT:seq_number}.
+CISCO_LOCAL_REMOTE_USERNAME Local:%{IP:src_ip}:%{INT:src_port} Remote:%{IP:dst_ip}:%{INT:dst_port} Username:%{DATA:username}
+CISCO_TRAFFIC_SELECTOR Address Range: %{IP}-%{IP} Protocol: %{INT} Port Range: %{INT}-%{INT}
+SRC_IP_PORT %{IP:src_ip}/%{INT:src_port}
+DST_IP_PORT %{IP:dst_ip}/%{INT:dst_port}
+SRC_INTERFACE_IP_PORT %{DATA:src_interface}:%{SRC_IP_PORT}
+DST_INTERFACE_IP_PORT %{DATA:dst_interface}:%{DST_IP_PORT}
 # ASA-1-104001
 CISCOFW104001 \((?:Primary|Secondary)\) Switching to ACTIVE - %{GREEDYDATA:switch_reason}
 # ASA-1-104002
@@ -76,11 +86,67 @@ CISCOFW500004 %{CISCO_REASON:reason} for protocol=%{WORD:protocol}, from %{IP:sr
 # ASA-6-602303, ASA-6-602304
 CISCOFW602303_602304 %{WORD:protocol}: An %{CISCO_DIRECTION:direction} %{GREEDYDATA:tunnel_type} SA \(SPI= %{DATA:spi}\) between %{IP:src_ip} and %{IP:dst_ip} \(user= %{DATA:user}\) has been %{CISCO_ACTION:action}
 # ASA-7-710001, ASA-7-710002, ASA-7-710003, ASA-7-710005, ASA-7-710006
-CISCOFW710001_710002_710003_710005_710006 %{WORD:protocol} (?:request|access) %{CISCO_ACTION:action} from %{IP:src_ip}/%{INT:src_port} to %{DATA:dst_interface}:%{IP:dst_ip}/%{INT:dst_port}
+CISCOFW710001_710002_710003_710005_710006 %{WORD:protocol} (?:request|access) %{CISCO_ACTION:action} from %{SRC_IP_PORT} to %{DATA:dst_interface}:%{IP:dst_ip}/(?:%{INT:dst_port}|%{WORD:dst_protocol})
 # ASA-6-713172
 CISCOFW713172 Group = %{GREEDYDATA:group}, IP = %{IP:src_ip}, Automatic NAT Detection Status:\s+Remote end\s*%{DATA:is_remote_natted}\s*behind a NAT device\s+This\s+end\s*%{DATA:is_local_natted}\s*behind a NAT device
 # ASA-4-733100
 CISCOFW733100 \[\s*%{DATA:drop_type}\s*\] drop %{DATA:drop_rate_id} exceeded. Current burst rate is %{INT:drop_rate_current_burst} per second, max configured rate is %{INT:drop_rate_max_burst}; Current average rate is %{INT:drop_rate_current_avg} per second, max configured rate is %{INT:drop_rate_max_avg}; Cumulative total count is %{INT:drop_total_count}
+# ASA-7-609001, ASA-7-609002
+CISCOFW7609001_7609002 %{CISCO_ACTION:action} local-host %{DATA:interface}:%{IP:dst_ip}(?: duration %{HOUR}:%{MINUTE}:%{SECOND})?
+# ASA-6-604103
+CISCOFW6604103 DHCP daemon interface %{GREEDYDATA:interface}:  address granted %{MAC:dst_mac}(?:\.[A-Da-f0-9]{2})? \(%{IP:dst_ip}\)
+# ASA-6-303002
+CISCOFW303002 FTP connection from %{SRC_INTERFACE_IP_PORT} to %{DST_INTERFACE_IP_PORT}, user %{DATA:dst_user} %{DATA:ftp_action} file %{DATA:filename}
+# ASA-6-607001
+CISCOFW6607001 Pre-allocate SIP(?: %{WORD})? %{WORD:protocol} secondary channel for %{SRC_INTERFACE_IP_PORT} to %{DATA:dst_interface}:%{IP:dst_ip} from %{DATA:message_type} message
+# ASA-5-500003
+CISCOFW5500003 Bad %{WORD:protocol} hdr lenght \(hdrlen=%{INT}, pktlen=%{INT}\) from %{SRC_IP_PORT} to %{DST_IP_PORT}, flags: %{DATA:flags} ,on interface %{DATA:interface}
+# ASA-3-751002 
+CISCOFW3751002 %{CISCO_LOCAL_REMOTE_USERNAME} %{DATA:protocol} No pre-shared key or trustpoint configured for self in tunnel group %{DATA:group_ip}
+# ASA-3-752015
+CISCOFW3752015 Tunnel Manager has failed to establish an L2L SA.  All configured IKE versions failed to establish the tunnel. %{CISCO_MAPPING}
+# ASA-4-752012
+CISCOFW4752012 %{DATA:protocol} was unsuccessful at setting up a tunnel.  %{CISCO_MAPPING}
+# ASA-4-752014
+CISCOFW4752014 Tunnel Manager dispatching a %{DATA:message_type} message to %{DATA:protocol} after a failed attempt..  %{CISCO_MAPPING}
+# ASA-5-713041 
+CISCOFW5713041 %{CISCO_GROUP_IP}, IKE Initiator: New Phase 1, Intf inside, IKE Peer %{IP:dst_ip}  local Proxy Address %{IP:local_proxy_ip}, remote Proxy Address %{IP:remote_proxy_ip},  Crypto map \(%{DATA:crypto_map}\)
+# ASA-5-750001
+CISCOFW5750001 %{CISCO_LOCAL_REMOTE_USERNAME} %{DATA:protocol} Received request to rekey an IPsec tunnel; local traffic selector = %{CISCO_TRAFFIC_SELECTOR:local_traffic_selector} ; remote traffic selector = %{CISCO_TRAFFIC_SELECTOR:remote_traffic_selector}
+# ASA-5-752003
+CISCOFW5752003 Tunnel Manager dispatching a %{DATA:message_type} message to %{DATA:protocol}.  %{CISCO_MAPPING}
+# ASA-6-713905
+CISCOFW6713905 %{CISCO_GROUP_IP}, Warning: %{GREEDYDATA:warning_message}
+# ASA-6-725001, ASA-6-725002
+CISCOFW6725001_6725002 (?:Starting|Device completed) %{CISCO_SSL_HANDSHAKE}
+# ASA-6-725007
+CISCOFW6725007 SSL session with %{CISCO_SSL_CLIENT} terminated
+# ASA-6-725016
+CISCOFW6725016 Device selects trust-point %{DATA:trust_point} for %{CISCO_SSL_CLIENT}
+# ASA-7-108006
+CISCOFW7108006 Detected ESMTP size violation from %{SRC_INTERFACE_IP_PORT} to %{DST_INTERFACE_IP_PORT}; declared size is: %{INT:declared_size}, actual size is %{INT:acutal_size}
+# ASA-7-713236
+CISCOFW7713236 %{CISCO_GROUP_IP}, IKE_DECODE RESENDING Message \(msgid=%{INT:message_id}\) with payloads : %{GREEDYDATA:ike_payload}
+# ASA-7-713906
+CISCOFW7713906_1 %{CISCO_GROUP_IP}, IKE SA %{DATA:ike_sa} terminating:  flags %{DATA:flags}, refcnt %{INT:refcnt}, tuncnt %{INT:tuncnt}
+CISCOFW7713906_2 %{CISCO_GROUP_IP}, sending delete/delete with reason message
+CISCOFW7713906_3 IKE Receiver: Packet received on %{DST_IP_PORT} from %{SRC_IP_PORT}
+# ASA-7-715046
+CISCOFW7715046 %{CISCO_GROUP_IP}, constructing %{GREEDYDATA:payload} payload
+# ASA-7-715065
+CISCOFW7715065 %{CISCO_GROUP_IP}, IKE MM Initiator FSM error history \(struct %{DATA:struct_id}\)  %{GREEDYDATA:strct_data}
+# ASA-7-715077
+CISCOFW7715077 (?:%{CISCO_GROUP_IP}, )?Pitcher: received(?: a)? %{DATA:message_type}, spi %{DATA:spi}
+# ASA-7-725008
+CISCOFW7725008 SSL %{CISCO_SSL_CLIENT} proposes the following %{INT} cipher\(s\)
+# ASA-7-725010
+CISCOFW7725010 Device supports the following %{INT} cipher\(s\)
+# ASA-7-725011
+CISCOFW7725011 Cipher\[%{INT:cipher_id}\] : %{DATA:cipher_name}
+# ASA-7-725012
+CISCOFW7725012 Device chooses cipher %{DATA:cipher_name} for the SSL session with %{CISCO_SSL_CLIENT}
+# ASA-7-752002
+CISCOFW7752002 Tunnel Manager Removed entry.  %{CISCO_MAPPING}
 #== End Cisco ASA ==
 
 # Shorewall firewall logs
